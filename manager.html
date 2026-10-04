@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E7C5A">
+<title>BeatBook Manager</title>
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#FBFAF7; --ink:#16201C; --ink-2:#3B4743; --muted:#5E6B66; --line:#E3E1DA; --grid:#ECEAE4;
+  --accent:#0E7C5A; --accent-ink:#FFFFFF; --accent-soft:#E3F2EC; --bar:#0E7C5A; --warn:#9A4A06; --warn-soft:#FDF0DC;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1513; --surface:#18201D; --surface-2:#141B18; --ink:#E8EEEB; --ink-2:#C5D0CB; --muted:#9AA8A2; --line:#2A3430; --grid:#222B28;
+    --accent:#34B987; --accent-ink:#04130D; --accent-soft:#163A2D; --bar:#2AA477; --warn:#F0B054; --warn-soft:#3A2A12;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+header img{width:36px;height:36px;border-radius:10px}
+h1{font-size:22px;margin:0;letter-spacing:-.01em}
+.muted{color:var(--muted)} .small{font-size:13px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.drop{border:2px dashed var(--line);border-radius:16px;background:var(--surface);padding:28px 16px;text-align:center}
+.drop.compact{padding:12px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between;text-align:left}.drop.compact .small{margin:0!important}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:820px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.card h2{font-size:15px;margin:0 0 2px}
+.card .sub{font-size:13px;color:var(--muted);margin-bottom:12px}
+.kpi b{display:block;font-size:26px;letter-spacing:-.02em}
+.kpi span{color:var(--muted);font-size:13px}
+.bars{display:flex;flex-direction:column;gap:2px}
+.bar-row{display:grid;grid-template-columns:minmax(90px,38%) 1fr;align-items:center;gap:10px;padding:5px 0;cursor:default}
+.bar-row .lbl{font-size:13.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{position:relative;height:18px;display:flex;align-items:center;border-left:1px solid var(--grid)}
+.fill{height:14px;background:var(--bar);border-radius:0 4px 4px 0;min-width:2px}
+.val{font-size:12.5px;color:var(--ink-2);margin-left:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bar-row:hover .fill,.bar-row:focus .fill{filter:brightness(1.12)}
+.bar-row:focus{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;border-top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
+.pill.ok{background:var(--accent-soft);color:var(--accent)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.notes li{margin:0 0 8px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 9px;font-size:12.5px;z-index:10;display:none;max-width:260px}
+.scroll{overflow-x:auto}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icon-192.png" alt="">
+    <div><h1>BeatBook Manager</h1><div class="small muted">Area manager's view of the reps' daily reports, built on the laptop from the CSVs the phones send.</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px"><button class="btn" id="sampleBtn">Load sample report</button><button class="btn hidden" id="clearBtn">Clear</button></div>
+  </header>
+
+  <div class="drop" id="drop">
+    <div style="font-weight:650;font-size:16px">Drop BeatBook CSV files here</div>
+    <div class="small muted" style="margin:6px 0 12px">Send them from the phone with Office Kit, Nearby Share or WhatsApp. Add as many reps or days as you like. Nothing is uploaded; it all stays in this browser.</div>
+    <label class="btn primary">Choose files<input type="file" id="file" accept=".csv,text/csv" multiple hidden></label>
+  </div>
+
+  <div id="dash" class="hidden" style="margin-top:16px">
+    <div class="small muted" id="scope" style="margin-bottom:10px"></div>
+    <div class="grid kpis">
+      <div class="card kpi"><b id="kVisited">0</b><span>Outlets visited</span></div>
+      <div class="card kpi"><b id="kStrike">0%</b><span>Strike rate (visits with an order)</span></div>
+      <div class="card kpi"><b id="kValue">₹0</b><span>Order value</span></div>
+      <div class="card kpi"><b id="kLines">0</b><span>Lines per order</span></div>
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h2>Order value by outlet</h2><div class="sub">Highest first</div><div class="bars" id="cOutlets"></div></div>
+      <div class="card"><h2>Top products by order value</h2><div class="sub">Across all orders</div><div class="bars" id="cProducts"></div></div>
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h2>Market notes from the field</h2><div class="sub">Stock-outs, competitor activity and requests captured at the shop</div><ul class="notes" id="notes"></ul></div>
+      <div class="card"><h2>Visits with no order</h2><div class="sub">Reasons recorded by reps</div><div class="bars" id="cReasons"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>All order lines</h2><div class="sub">Table view of the data above</div>
+      <div class="scroll"><table id="tbl"></table></div>
+    </div>
+  </div>
+</div>
+<div class="tip" id="tip" role="status"></div>
+
+<script type="module">
+import { parseRules } from './parser.js';
+import { skuById, REP, OUTLETS } from './catalog.js';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const inr = n => '₹' + Math.round(n || 0).toLocaleString('en-IN');
+let rows = [];
+const files = [];
+
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const out = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); out.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); out.push(row); }
+  const [head, ...body] = out.filter(r => r.some(x => x !== ''));
+  if (!head || !head.includes('Outlet')) throw new Error('Not a BeatBook CSV');
+  return body.map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ''])));
+}
+
+function addRows(newRows, label) {
+  rows = rows.concat(newRows);
+  files.push(label);
+  draw();
+}
+
+function barList(el, items, fmt) {
+  const max = Math.max(1, ...items.map(i => i.v));
+  el.innerHTML = items.length ? items.map(i => `
+    <div class="bar-row" tabindex="0" data-tip="${esc(i.tip || `${i.k}: ${fmt(i.v)}`)}">
+      <div class="lbl" title="${esc(i.k)}">${esc(i.k)}</div>
+      <div class="track"><div class="fill" style="width:${Math.max(0.5, (i.v / max) * 82)}%"></div><span class="val">${fmt(i.v)}</span></div>
+    </div>`).join('') : '<div class="small muted">Nothing to show yet.</div>';
+}
+
+function draw() {
+  $('#dash').classList.toggle('hidden', !rows.length);
+  $('#clearBtn').classList.toggle('hidden', !rows.length);
+  $('#drop').classList.toggle('compact', rows.length > 0);
+  if (!rows.length) return;
+  const visitKey = r => `${r.Date}|${r.Rep}|${r.Outlet}`;
+  const visits = new Map();
+  rows.forEach(r => { if (!visits.has(visitKey(r))) visits.set(visitKey(r), r); });
+  const ordered = [...visits.values()].filter(r => r.Status === 'Ordered');
+  const lines = rows.filter(r => r.SKU);
+  const value = lines.reduce((a, r) => a + Number(r['Value (Rs)'] || 0), 0);
+  const reps = new Set(rows.map(r => r.Rep)), dates = new Set(rows.map(r => r.Date));
+  $('#scope').textContent = `${files.length} report${files.length > 1 ? 's' : ''} · ${reps.size} rep${reps.size > 1 ? 's' : ''} · ${[...dates].join(', ')} · ${[...new Set(rows.map(r => r.Beat))].join(', ')}`;
+  $('#kVisited').textContent = visits.size;
+  $('#kStrike').textContent = visits.size ? Math.round(100 * ordered.length / visits.size) + '%' : '0%';
+  $('#kValue').textContent = inr(value);
+  $('#kLines').textContent = ordered.length ? (lines.length / ordered.length).toFixed(1) : '0';
+
+  const byOutlet = {};
+  lines.forEach(r => { byOutlet[r.Outlet] = (byOutlet[r.Outlet] || 0) + Number(r['Value (Rs)'] || 0); });
+  barList($('#cOutlets'), Object.entries(byOutlet).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v), inr);
+
+  const byProd = {};
+  lines.forEach(r => { const k = `${r.Product} ${r.Pack}`; byProd[k] = byProd[k] || { v: 0, pcs: 0 }; byProd[k].v += Number(r['Value (Rs)'] || 0); byProd[k].pcs += Number(r.Pieces || 0); });
+  barList($('#cProducts'), Object.entries(byProd).map(([k, o]) => ({ k, v: o.v, tip: `${k}: ${inr(o.v)} · ${o.pcs} pcs` })).sort((a, b) => b.v - a.v).slice(0, 8), inr);
+
+  const reasons = {};
+  [...visits.values()].filter(r => r.Status === 'No order').forEach(r => { const k = r['No-order reason'] || 'Not given'; reasons[k] = (reasons[k] || 0) + 1; });
+  barList($('#cReasons'), Object.entries(reasons).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v), v => `${v} visit${v > 1 ? 's' : ''}`);
+
+  const notes = rows.filter(r => r['Shop note']);
+  $('#notes').innerHTML = notes.length ? notes.map(r => `<li><b>${esc(r.Outlet)}</b> <span class="muted small">(${esc(r.Rep)})</span>: ${esc(r['Shop note'])}</li>`).join('') : '<li class="muted">No notes.</li>';
+
+  $('#tbl').innerHTML = `<thead><tr><th>Rep</th><th>Outlet</th><th>Status</th><th>Product</th><th>Pack</th><th class="num">Qty</th><th class="num">Pieces</th><th class="num">Value</th></tr></thead><tbody>${
+    rows.map(r => `<tr><td>${esc(r.Rep)}</td><td>${esc(r.Outlet)}</td><td>${r.Status === 'Ordered' ? '<span class="pill ok">Ordered</span>' : `<span class="pill warn">No order</span> <span class="small muted">${esc(r['No-order reason'])}</span>`}</td><td>${esc(r.Product)}</td><td>${esc(r.Pack)}</td><td class="num">${r.Qty ? esc(r.Qty + ' ' + r.Unit) : ''}</td><td class="num">${esc(r.Pieces)}</td><td class="num">${r['Value (Rs)'] ? inr(r['Value (Rs)']) : ''}</td></tr>`).join('')
+  }</tbody>`;
+}
+
+// tooltip
+const tip = $('#tip');
+document.addEventListener('pointermove', e => {
+  const row = e.target.closest?.('.bar-row');
+  if (!row) { tip.style.display = 'none'; return; }
+  tip.textContent = row.dataset.tip; tip.style.display = 'block';
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8), y = e.clientY + 16;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+});
+document.addEventListener('focusin', e => {
+  const row = e.target.closest?.('.bar-row'); if (!row) return;
+  const r = row.getBoundingClientRect(); tip.textContent = row.dataset.tip; tip.style.display = 'block';
+  tip.style.left = Math.min(r.left + 20, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (r.bottom + 4) + 'px';
+});
+document.addEventListener('focusout', () => { tip.style.display = 'none'; });
+
+async function readFiles(list) {
+  for (const f of list) {
+    try { addRows(parseCSV(await f.text()), f.name); }
+    catch (e) { alert(`${f.name}: ${e.message}`); }
+  }
+}
+$('#file').addEventListener('change', e => { readFiles([...e.target.files]); e.target.value = ''; });
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => readFiles([...e.dataTransfer.files]));
+$('#clearBtn').addEventListener('click', () => { rows = []; files.length = 0; draw(); });
+
+// Sample: two reps' days built with the same parser the phone uses
+$('#sampleBtn').addEventListener('click', () => {
+  const date = new Date().toLocaleDateString('en-CA');
+  const days = [
+    { rep: REP.name, beat: REP.beat, visits: {
+      O1: ['Coco Gold 200 ml two dozen, Golden Leaf 500 gram 10 packets, Brite Wash 1 kg one case', 'Pearl soap out of stock.'],
+      O2: ['nariyal tel sau ml teen darjan, chai paanch packet, dus wala biscuit do peti', 'Competitor running a 10% scheme on coconut oil.'],
+      O3: [null, '', 'Payment pending'],
+      O4: ['Sunfresh 1 litre 2 case, Smile toothpaste 100 gram 1 dozen, Silky shampoo 10 strip', ''],
+      O6: ['Amla shine 200 ml 12 bottles, Quick noodles 2 case, Pearl soap 150 gram 1 dozen', 'Owner asked for a display rack.'],
+    } },
+    { rep: 'Priya Nair', beat: 'Powai · Beat 1', visits: {
+      O1: ['Sunfresh 5 litre 4 jar, Coco Gold 500 ml 1 case', ''],
+      O2: [null, '', 'Shop closed'],
+      O3: ['Golden Leaf 250 gram 2 dozen, Morning Crunch 30 rupees 3 dozen, Silky 180 ml 6 bottles', 'New supermarket opened next door.'],
+      O4: ['Brite Wash 500 gram 2 case, Pearl soap 100 gram 3 dozen', ''],
+      O5: [null, '', 'Enough stock'],
+    } },
+  ];
+  const powai = ['Hiranandani Daily Needs', 'Sai Krupa Stores', 'Ganesh Provision', 'Powai Mart', 'Lake View Kirana', 'Raj General Store'];
+  days.forEach((day, di) => {
+    const out = [];
+    Object.entries(day.visits).forEach(([id, [text, note, reason]]) => {
+      const idx = Number(id.slice(1)) - 1;
+      const name = di === 0 ? OUTLETS[idx].name : powai[idx];
+      const base = { Date: date, Rep: day.rep, Beat: day.beat, Outlet: name, Status: text ? 'Ordered' : 'No order', 'No-order reason': reason || '', 'Shop note': '' };
+      if (!text) { out.push({ ...base, 'Shop note': note }); return; }
+      parseRules(text).lines.forEach((l, i) => {
+        const s = skuById[l.sku];
+        out.push({ ...base, SKU: s.id, Product: s.name, Pack: s.size, Qty: String(l.qty), Unit: l.unit, Pieces: String(l.pcs), 'Value (Rs)': String(l.pcs * s.price), 'Shop note': i === 0 ? note : '' });
+      });
+    });
+    addRows(out, `sample-${day.rep}`);
+  });
+});
+</script>
+</body>
+</html>
